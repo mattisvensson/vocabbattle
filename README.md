@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vokabattle EN ⚔️ ES
 
-## Getting Started
+A two-player vocab duel for learning English and Spanish. One player opens a room, the other joins with a 4-letter code or invite link. Players take turns: the quizmaster picks a word card, the guesser has 20 seconds to translate it while the quizmaster watches them type live.
 
-First, run the development server:
+- Each player chooses their own learning direction (EN → ES, ES → EN or mixed)
+- UI in German, English and Spanish
+- Typed answers or multiple choice, hints, streak bonus, trash talk and emoji reactions
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000. To try it alone, use a second (incognito) window as player two.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Path | Purpose |
+| --- | --- |
+| `src/lib/game.ts` | Game logic, in-memory room store, per-player views |
+| `src/lib/vocab.ts` | Word list (add words here) |
+| `src/lib/i18n.tsx` | UI translations and language switcher |
+| `src/app/api/rooms/` | API routes (create, join, actions, polling) |
+| `src/components/` | Room shell and game screens |
 
-## Learn More
+## Limitations
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Rooms are stored in server memory. They're lost on restart and need a single long-running Node process (`npm run build && npm start`). Serverless hosting such as Vercel would need a shared store like Redis. Clients poll the server about once per second.

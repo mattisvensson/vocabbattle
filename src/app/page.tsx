@@ -1,69 +1,115 @@
-import Image from "next/image";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ProfileFields, useProfile } from "@/components/ProfileForm";
+import { Button, Card, Logo } from "@/components/ui";
+import { createRoom, joinRoom, saveToken } from "@/lib/client";
+import { errorText, LanguageSwitcher, useI18n } from "@/lib/i18n";
+
+const TICKER = ["ticker1", "ticker2", "ticker3", "ticker4", "ticker5", "ticker6"] as const;
+const STEPS = [
+  ["🃏", "step1"],
+  ["⏱️", "step2"],
+  ["🔄", "step3"],
+] as const;
 
 export default function Home() {
+  const router = useRouter();
+  const { t } = useI18n();
+  const profile = useProfile();
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ready = profile.name.trim().length > 0;
+
+  async function run(fn: () => Promise<{ code: string; token: string }>) {
+    if (!ready) return setError(t("needName"));
+    setBusy(true);
+    setError(null);
+    try {
+      profile.persist();
+      const res = await fn();
+      saveToken(res.code, res.token);
+      router.push(`/room/${res.code}`);
+    } catch (e) {
+      setError(errorText(t, (e as Error).message));
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="flex flex-1 flex-col">
+      <div className="overflow-hidden border-b-3 border-ink bg-ink py-2 text-cream">
+        <div className="marquee flex w-max gap-10 whitespace-nowrap text-sm font-bold">
+          {[...TICKER, ...TICKER].map((k, i) => (
+            <span key={i}>{t(k)}</span>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      <div className="mx-auto flex w-full max-w-5xl justify-end px-4 pt-4">
+        <LanguageSwitcher />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col items-center gap-10 px-4 py-6 sm:py-10">
+        <div className="pop-in text-center">
+          <Logo />
+          <p className="mt-4 text-lg font-semibold sm:text-xl">{t("tagline")}</p>
         </div>
-      </main>
-    </div>
+
+        <div className="grid w-full gap-6 md:grid-cols-[1.2fr_1fr]">
+          <Card className="pop-in -rotate-1 [animation-delay:80ms]">
+            <ProfileFields profile={profile} />
+          </Card>
+
+          <div className="flex flex-col gap-6">
+            <Card color="pink" className="pop-in rotate-1 [animation-delay:160ms]">
+              <h2 className="text-2xl font-black">{t("newGame")}</h2>
+              <p className="mb-4 font-semibold">{t("newGameText")}</p>
+              <Button color="lemon" className="w-full" disabled={busy} onClick={() => run(() => createRoom(profile.name, profile.avatar))}>
+                {t("createRoom")}
+              </Button>
+            </Card>
+
+            <Card color="sky" className="pop-in -rotate-1 [animation-delay:240ms]">
+              <h2 className="text-2xl font-black">{t("join")}</h2>
+              <p className="mb-4 font-semibold">{t("joinText")}</p>
+              <form
+                className="flex gap-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  run(() => joinRoom(code, profile.name, profile.avatar));
+                }}
+              >
+                <input
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4))}
+                  placeholder="ABCD"
+                  className="brut-sm w-full min-w-0 bg-white px-3 py-3 text-center font-mono text-2xl font-black tracking-[0.4em] outline-none"
+                />
+                <Button color="mint" disabled={busy || code.length !== 4}>
+                  {t("go")}
+                </Button>
+              </form>
+            </Card>
+          </div>
+        </div>
+
+        {error && <div className="brut-sm shake bg-tomato px-4 py-2 font-bold text-white">{error}</div>}
+
+        <section className="grid w-full gap-4 sm:grid-cols-3">
+          {STEPS.map(([e, k], i) => (
+            <div key={k} className="brut-sm flex items-start gap-3 bg-white p-4">
+              <span className="text-3xl">{e}</span>
+              <p className="font-semibold">
+                <span className="font-black">{t("step", { n: i + 1 })}</span> {t(k)}
+              </p>
+            </div>
+          ))}
+        </section>
+      </div>
+    </main>
   );
 }
